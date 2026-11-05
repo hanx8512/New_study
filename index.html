@@ -51,43 +51,61 @@
       const response = await fetch(url, options);
       const data = await response.json().catch(() => null);
       if (!response.ok) {
-        throw new Error(typeof data?.detail === "string" ? data.detail : "请求失败：" + response.status);
+        throw new Error(
+          typeof data?.detail === "string"
+            ? data.detail
+            : "请求失败：" + response.status
+        );
       }
       return data;
     }
 
     let latestSearch = 0;
+
     async function render() {
       const currentSearch = ++latestSearch;
       const query = new URLSearchParams({
         keyword: search.value.trim(),
         type: filter.value
       });
+
       try {
         const posts = await api("/api/posts?" + query);
         if (currentSearch !== latestSearch) return;
-        list.innerHTML = posts.length ? posts.map(p =>
-          '<article>' +
-            '<small>' + safe(p.type) + ' · ' + safe(p.place) + '</small>' +
-            '<h3>' + safe(p.title) + '</h3>' +
-            '<p>' + safe(p.description) + '</p>' +
-            '<button data-id="' + safe(p.id) + '">' +
-              (p.type === "招领" ? "申请认领" : "提供线索") +
-            '</button>' +
-          '</article>'
-        ).join("") : "<p>暂无符合条件的信息</p>";
+
+        list.innerHTML = posts.length
+          ? posts.map(p =>
+              '<article>' +
+                '<small>' + safe(p.type) + ' · ' + safe(p.place) + '</small>' +
+                '<h3>' + safe(p.title) + '</h3>' +
+                '<p>' + safe(p.description) + '</p>' +
+                '<button data-id="' + safe(p.id) + '">' +
+                  (p.type === "招领" ? "申请认领" : "提供线索") +
+                '</button>' +
+              '</article>'
+            ).join("")
+          : "<p>暂无符合条件的信息</p>";
       } catch (error) {
-        if (currentSearch === latestSearch) list.textContent = "加载失败：" + error.message;
+        if (currentSearch === latestSearch) {
+          list.textContent = "加载失败：" + error.message;
+        }
       }
     }
 
     form.onsubmit = async e => {
       e.preventDefault();
       const post = Object.fromEntries(new FormData(form));
-      for (const key of Object.keys(post)) post[key] = post[key].trim();
-      if (!post.title || !post.place || !post.description) return alert("请填写完整信息");
+
+      for (const key of Object.keys(post)) {
+        post[key] = post[key].trim();
+      }
+      if (!post.title || !post.place || !post.description) {
+        return alert("请填写完整信息");
+      }
+
       const button = form.querySelector("button");
       button.disabled = true;
+
       try {
         await api("/api/posts", {
           method: "POST",
@@ -107,8 +125,10 @@
     list.onclick = async e => {
       const button = e.target.closest("button[data-id]");
       if (!button) return;
+
       const proof = prompt("请填写未公开的物品特征或线索：");
       if (!proof?.trim()) return;
+
       button.disabled = true;
       try {
         await api("/api/posts/" + button.dataset.id + "/applications", {
