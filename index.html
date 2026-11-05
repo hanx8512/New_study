@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>校园失物招领</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f5f7fb;
+      color: #243447;
+      font-family: "Microsoft YaHei", sans-serif;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    header {
+      background: white;
+      border-bottom: 1px solid #e6ebf2;
+    }
+    .container { max-width: 1100px; margin: auto; padding: 0 20px; }
+    .nav {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      gap: 25px;
+    }
+    .logo { color: #3869e8; font-size: 22px; font-weight: bold; }
+    .nav button {
+      border: 0;
+      background: none;
+      color: #607086;
+      padding: 9px 12px;
+    }
+    .nav button.active { color: #3869e8; font-weight: bold; }
+    .nav .publish-button { margin-left: auto; }
+    .primary {
+      border: 0;
+      border-radius: 9px;
+      background: #3869e8 !important;
+      color: white !important;
+      padding: 11px 18px !important;
+      font-weight: bold;
+    }
+    .primary:hover { background: #2858d5 !important; }
+    .hero {
+      margin-top: 26px;
+      padding: 48px;
+      border-radius: 18px;
+      background: linear-gradient(120deg, #3869e8, #75a8f1);
+      color: white;
+    }
+    .hero h1 { margin: 0 0 12px; font-size: 36px; }
+    .hero p { margin: 0; color: #eaf1ff; }
+    .title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      margin: 34px 0 18px;
+    }
+    .title-row h2 { margin: 0 0 5px; }
+    .title-row p { margin: 0; color: #8592a3; font-size: 14px; }
+    .filters { display: flex; gap: 12px; margin-bottom: 20px; }
+    .filters input, .filters select {
+      height: 43px;
+      border: 1px solid #dce4ef;
+      border-radius: 9px;
+      background: white;
+      padding: 0 12px;
+    }
+    .filters input { flex: 1; min-width: 0; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+      padding-bottom: 60px;
+    }
+    .card {
+      border: 1px solid #e6ebf2;
+      border-radius: 14px;
+      background: white;
+      overflow: hidden;
+      text-align: left;
+      padding: 0;
+    }
+    .card:hover { box-shadow: 0 10px 25px #dce5f2; }
+    .card-picture {
+      height: 130px;
+      display: grid;
+      place-items: center;
+      background: #eaf0ff;
+      font-size: 55px;
+    }
+    .card-content { padding: 17px; }
+    .tag {
+      display: inline-block;
+      border-radius: 5px;
+      padding: 4px 8px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .lost { background: #fff0e6; color: #dc783c; }
+    .found { background: #e5f8f0; color: #248968; }
+    .closed { background: #edf0f4; color: #778493; }
+    .card h3 { margin: 12px 0 8px; font-size: 17px; }
+    .card p {
+      color: #74859a;
+      font-size: 13px;
+      line-height: 1.6;
+      min-height: 42px;
+    }
+    .card small { color: #95a3b2; }
+    .empty {
+      grid-column: 1 / -1;
+      padding: 60px;
+      text-align: center;
+      color: #8493a5;
+      background: white;
+      border-radius: 14px;
+    }
+    dialog {
+      width: min(530px, calc(100% - 24px));
+      max-height: 88vh;
+      overflow: auto;
+      border: 0;
+      border-radius: 15px;
+      padding: 24px;
+      box-shadow: 0 25px 60px #1d335255;
+    }
+    dialog::backdrop { background: #15233899; }
+    .dialog-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .dialog-top h2 { margin: 0; }
+    .close {
+      border: 0;
+      background: #edf1f6;
+      border-radius: 7px;
+      width: 30px;
+      height: 30px;
+      font-size: 20px;
+    }
+    label { display: block; margin: 14px 0 6px; font-weight: bold; font-size: 14px; }
+    form input, form select, form textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #dce4ef;
+      border-radius: 8px;
+    }
+    textarea { min-height: 90px; resize: vertical; }
+    .form-actions { margin-top: 20px; text-align: right; }
+    .detail-text { line-height: 1.8; white-space: pre-wrap; }
+    .muted { color: #8291a2; font-size: 13px; }
+    .request {
+      background: #f6f8fc;
+      border: 1px solid #e6ebf2;
+      border-radius: 9px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+    .request button { margin: 10px 8px 0 0; }
+    @media (max-width: 800px) {
+      .grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .nav { gap: 4px; }
+      .logo { font-size: 17px; }
+      .hero { padding: 30px 22px; }
+      .hero h1 { font-size: 27px; }
+      .filters { flex-wrap: wrap; }
+      .filters input { flex-basis: 100%; }
+      .filters select { flex: 1; }
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container nav">
+      <div class="logo">⌖ 寻迹</div>
+      <button id="allButton" class="active">失物广场</button>
+      <button id="mineButton">我的发布</button>
+      <button id="publishButton" class="primary publish-button">＋ 发布信息</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="hero">
+      <h1>寻找遗失，传递温暖</h1>
+      <p>发布线索、快速查找，让失物与主人重新相遇。</p>
+    </section>
+
+    <div class="title-row">
+      <div>
+        <h2 id="pageTitle">最新信息</h2>
+        <p>浏览校园里的寻物与招领信息</p>
+      </div>
+    </div>
+
+    <div class="filters">
+      <input id="searchInput" placeholder="搜索物品名称、描述或地点">
+      <select id="typeFilter">
+        <option value="">全部类型</option>
+        <option value="LOST">寻物启事</option>
+        <option value="FOUND">失物招领</option>
+      </select>
+      <select id="categoryFilter">
+        <option value="">全部分类</option>
+        <option>证件卡片</option>
+        <option>数码产品</option>
+        <option>生活用品</option>
+        <option>书籍资料</option>
+        <option>其他</option>
+      </select>
+    </div>
+
+    <div id="postGrid" class="grid"></div>
+  </main>
+
+  <dialog id="publishDialog">
+    <div class="dialog-top">
+      <h2>发布信息</h2>
+      <button class="close" onclick="publishDialog.close()">×</button>
+    </div>
+    <form id="publishForm">
+      <label for="postType">信息类型</label>
+      <select id="postType" required>
+        <option value="LOST">我丢了东西</option>
+        <option value="FOUND">我捡到了东西</option>
+      </select>
+
+      <label for="postCategory">物品分类</label>
+      <select id="postCategory" required>
+        <option>证件卡片</option>
+        <option>数码产品</option>
+        <option>生活用品</option>
+        <option>书籍资料</option>
+        <option>其他</option>
+      </select>
+
+      <label for="postTitle">物品名称</label>
+      <input id="postTitle" maxlength="50" required placeholder="例如：黑色保温杯">
+
+      <label for="postDescription">公开描述</label>
+      <textarea id="postDescription" maxlength="500" required
+        placeholder="描述外观和经过，保留一处关键特征用于认领核对"></textarea>
+
+      <label for="postLocation">丢失／拾到地点</label>
+      <input id="postLocation" required placeholder="例如：图书馆二楼">
+
+      <label for="postDate">发生日期</label>
+      <input id="postDate" type="date" required>
+
+      <div class="form-actions">
+        <button type="submit" class="primary">确认发布</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="detailDialog">
+    <div class="dialog-top">
+      <h2>信息详情</h2>
+      <button class="close" onclick="detailDialog.close()">×</button>
+    </div>
+    <div id="detailContent"></div>
+  </dialog>
+
+  <script>
+    // 这是可直接运行的前端演示版。数据保存在当前浏览器的 localStorage 中。
+    const POSTS_KEY = "campus_posts";
+    const REQUESTS_KEY = "campus_requests";
+    const CURRENT_USER = "me";
+
+    const samplePosts = [
+      {
+        id: 1, type: "FOUND", category: "证件卡片",
+        title: "拾到一张校园卡",
+        description: "在图书馆一楼拾到。认领时请描述卡面信息。",
+        location: "图书馆一楼", date: "2026-11-04",
+        owner: "student-a", status: "OPEN"
+      },
+      {
+        id: 2, type: "LOST", category: "数码产品",
+        title: "寻找白色蓝牙耳机",
+        description: "可能遗落在教学楼B座，耳机盒为白色。",
+        location: "教学楼B座", date: "2026-11-03",
+        owner: "student-b", status: "OPEN"
+      },
+      {
+        id: 3, type: "FOUND", category: "生活用品",
+        title: "拾到深蓝色雨伞",
+        description: "在第二食堂入口拾到。",
+        location: "第二食堂", date: "2026-11-02",
+        owner: "student-c", status: "OPEN"
+      }
+    ];
+
+    let posts = JSON.parse(localStorage.getItem(POSTS_KEY) || "null") || samplePosts;
+    let requests = JSON.parse(localStorage.getItem(REQUESTS_KEY) || "[]");
+    let currentPage = "all";
+    let selectedPostId = null;
+
+    const icons = {
+      "证件卡片": "▣",
+      "数码产品": "◉",
+      "生活用品": "☂",
+      "书籍资料": "▤",
+      "其他": "✦"
+    };
+
+    function save() {
+      localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
+      localStorage.setItem(REQUESTS_KEY, JSON.stringify(requests));
+    }
+
+    // 防止用户输入的 HTML 被当成页面代码执行
+    function escapeHTML(value) {
+      return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[char]);
+    }
+
+    function renderPosts() {
+      const keyword = document.getElementById("searchInput").value.trim().toLowerCase();
+      const type = document.getElementById("typeFilter").value;
+      const category = document.getElementById("categoryFilter").value;
+
+      const filtered = posts.filter(post => {
+        if (currentPage === "mine" && post.owner !== CURRENT_USER) return false;
+        if (type && post.type !== type) return false;
+        if (category && post.category !== category) return false;
+
+        const text = `${post.title} ${post.description} ${post.location}`.toLowerCase();
+        return text.includes(keyword);
+      });
+
+      const grid = document.getElementById("postGrid");
+      grid.innerHTML = filtered.length
+        ? filtered.map(post => `
+          <button class="card" onclick="showDetail(${post.id})">
+            <div class="card-picture">${icons[post.category] || "✦"}</div>
+            <div class="card-content">
+              <span class="tag ${post.type === "LOST" ? "lost" : "found"}">
+                ${post.type === "LOST" ? "寻物启事" : "失物招领"}
+              </span>
+              ${post.status === "CLOSED" ? '<span class="tag closed">已找回</span>' : ""}
+              <h3>${escapeHTML(post.title)}</h3>
+              <p>${escapeHTML(post.description.slice(0, 70))}</p>
+              <small>⌖ ${escapeHTML(post.location)}　·　${escapeHTML(post.date)}</small>
+            </div>
+          </button>
+        `).join("")
+        : '<div class="empty">没有找到符合条件的信息</div>';
+    }
+
+    function showDetail(id) {
+      const post = posts.find(item => item.id === id);
+      if (!post) return;
+
+      selectedPostId = id;
+      const mine = post.owner === CURRENT_USER;
+      const myRequest = requests.find(
+        item => item.postId === id && item.applicant === CURRENT_USER
+      );
+      const received = requests.filter(item => item.postId === id);
+
+      let actionHTML = "";
+
+      if (mine) {
+        actionHTML = `
+          <hr>
+          <h3>收到的申请（${received.length}）</h3>
+          ${received.length ? received.map(item => `
+            <div class="request">
+              <strong>申请说明：</strong>${escapeHTML(item.proof)}
+              <p class="muted">状态：${statusText(item.status)}</p>
+              ${item.status === "PENDING" && post.status === "OPEN" ? `
+                <button onclick="handleRequest(${item.id}, 'APPROVED')">通过</button>
+                <button onclick="handleRequest(${item.id}, 'REJECTED')">拒绝</button>
+              ` : ""}
+            </div>
+          `).join("") : '<p class="muted">还没有人提交申请。</p>'}
+          ${post.status === "OPEN"
+            ? '<p><button class="primary" onclick="closePost()">交接完成，关闭信息</button></p>'
+            : ""}
+        `;
+      } else if (post.status === "OPEN") {
+        actionHTML = myRequest
+          ? `<p class="muted">你已提交申请，状态：${statusText(myRequest.status)}</p>`
+          : `
+            <hr>
+            <form id="requestForm">
+              <label for="proof">
+                ${post.type === "FOUND" ? "填写认领说明" : "填写物品线索"}
+              </label>
+              <textarea id="proof" required maxlength="300"
+                placeholder="描述未公开的物品特征、发现时间或地点"></textarea>
+              <div class="form-actions">
+                <button class="primary" type="submit">提交申请</button>
+              </div>
+            </form>
+          `;
+      }
+
+      document.getElementById("detailContent").innerHTML = `
+        <span class="tag ${post.type === "LOST" ? "lost" : "found"}">
+          ${post.type === "LOST" ? "寻物启事" : "失物招领"}
+        </span>
+        <h2>${escapeHTML(post.title)}</h2>
+        <p class="muted">
+          ${escapeHTML(post.category)} ·
+          ${escapeHTML(post.location)} ·
+          ${escapeHTML(post.date)}
+        </p>
+        <p class="detail-text">${escapeHTML(post.description)}</p>
+        ${actionHTML}
+      `;
+
+      const form = document.getElementById("requestForm");
+      if (form) {
+        form.addEventListener("submit", event => {
+          event.preventDefault();
+          const proof = document.getElementById("proof").value.trim();
+          if (!proof) return;
+
+          requests.push({
+            id: Date.now(),
+            postId: selectedPostId,
+            applicant: CURRENT_USER,
+            proof,
+            status: "PENDING"
+          });
+          save();
+          showDetail(selectedPostId);
+          alert("申请已提交");
+        });
+      }
+
+      if (!detailDialog.open) detailDialog.showModal();
+    }
+
+    function statusText(status) {
+      return {
+        PENDING: "待处理",
+        APPROVED: "已通过",
+        REJECTED: "已拒绝"
+      }[status] || status;
+    }
+
+    function handleRequest(id, decision) {
+      const request = requests.find(item => item.id === id);
+      const post = posts.find(item => item.id === selectedPostId);
+      if (!request || !post || post.owner !== CURRENT_USER) return;
+
+      request.status = decision;
+      save();
+      showDetail(selectedPostId);
+    }
+
+    function closePost() {
+      const post = posts.find(item => item.id === selectedPostId);
+      if (!post || post.owner !== CURRENT_USER) return;
+
+      post.status = "CLOSED";
+      save();
+      renderPosts();
+      showDetail(selectedPostId);
+    }
+
+    document.getElementById("publishButton").onclick = () => {
+      publishDialog.showModal();
+    };
+
+    document.getElementById("allButton").onclick = () => {
+      currentPage = "all";
+      document.getElementById("pageTitle").textContent = "最新信息";
+      allButton.classList.add("active");
+      mineButton.classList.remove("active");
+      renderPosts();
+    };
+
+    document.getElementById("mineButton").onclick = () => {
+      currentPage = "mine";
+      document.getElementById("pageTitle").textContent = "我的发布";
+      mineButton.classList.add("active");
+      allButton.classList.remove("active");
+      renderPosts();
+    };
+
+    ["searchInput", "typeFilter", "categoryFilter"].forEach(id => {
+      document.getElementById(id).addEventListener("input", renderPosts);
+    });
+
+    document.getElementById("publishForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      posts.unshift({
+        id: Date.now(),
+        type: document.getElementById("postType").value,
+        category: document.getElementById("postCategory").value,
+        title: document.getElementById("postTitle").value.trim(),
+        description: document.getElementById("postDescription").value.trim(),
+        location: document.getElementById("postLocation").value.trim(),
+        date: document.getElementById("postDate").value,
+        owner: CURRENT_USER,
+        status: "OPEN"
+      });
+
+      save();
+      event.target.reset();
+      publishDialog.close();
+      mineButton.click();
+      alert("发布成功");
+    });
+
+    document.getElementById("postDate").value =
+      new Date().toLocaleDateString("sv-SE");
+
+    renderPosts();
+  </script>
+</body>
+</html>
