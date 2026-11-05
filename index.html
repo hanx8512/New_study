@@ -12,6 +12,7 @@
     form input, form textarea { display: block; width: 95%; }
     textarea { height: 65px; }
     button { padding: 9px 15px; border: 0; border-radius: 6px; background: #3266df; color: white; cursor: pointer; }
+    button:disabled { opacity: .6; cursor: wait; }
     small { color: #777; }
   </style>
 </head>
@@ -21,9 +22,9 @@
   <form id="publish">
     <h2>发布信息</h2>
     <select name="type"><option>寻物</option><option>招领</option></select>
-    <input name="title" placeholder="物品名称" required>
-    <input name="place" placeholder="丢失或拾到地点" required>
-    <textarea name="description" placeholder="物品描述" required></textarea>
+    <input name="title" placeholder="物品名称" maxlength="50" required>
+    <input name="place" placeholder="丢失或拾到地点" maxlength="80" required>
+    <textarea name="description" placeholder="物品描述" maxlength="500" required></textarea>
     <button>发布</button>
   </form>
 
@@ -35,46 +36,99 @@
   <div id="list"></div>
 
   <script>
-    const key = "lost-found-posts";
-    let posts = JSON.parse(localStorage.getItem(key) || "[]");
+    const form = document.querySelector("#publish");
+    const search = document.querySelector("#search");
+    const filter = document.querySelector("#filter");
+    const list = document.querySelector("#list");
 
     function safe(text) {
-      return String(text).replace(/[&<>"']/g, c =>
+      return String(text ?? "").replace(/[&<>"']/g, c =>
         ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]
       );
     }
 
-    function render() {
-      const word = search.value.trim().toLowerCase();
-      const type = filter.value;
-      const results = posts.filter(p =>
-        (type === "全部" || p.type === type) &&
-        (p.title + p.place).toLowerCase().includes(word)
-      );
-
-      list.innerHTML = results.length
-        ? results.map(p => `
-            <article>
-              <small>${safe(p.type)} · ${safe(p.place)}</small>
-              <h3>${safe(p.title)}</h3>
-              <p>${safe(p.description)}</p>
-              <button onclick="alert('认领功能需要接入后端')">
-                ${p.type === "招领" ? "申请认领" : "提供线索"}
-              </button>
-            </article>
-          `).join("")
-        : "<p>暂无符合条件的信息</p>";
+    async function api(url, options) {
+      const response = await fetch(url, options);
+      const data = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(typeof data?.detail === "string" ? data.detail : "请求失败：" + response.status);
+      }
+      return data;
     }
 
-    publish.onsubmit = e => {
+    let latestSearch = 0;
+    async function render() {
+      const currentSearch = ++latestSearch;
+      const query = new URLSearchParams({
+        keyword: search.value.trim(),
+        type: filter.value
+      });
+      try {
+        const posts = await api("/api/posts?" + query);
+        if (currentSearch !== latestSearch) return;
+        list.innerHTML = posts.length ? posts.map(p =>
+          '<article>' +
+            '<small>' + safe(p.type) + ' · ' + safe(p.place) + '</small>' +
+            '<h3>' + safe(p.title) + '</h3>' +
+            '<p>' + safe(p.description) + '</p>' +
+            '<button data-id="' + safe(p.id) + '">' +
+              (p.type === "招领" ? "申请认领" : "提供线索") +
+            '</button>' +
+          '</article>'
+        ).join("") : "<p>暂无符合条件的信息</p>";
+      } catch (error) {
+        if (currentSearch === latestSearch) list.textContent = "加载失败：" + error.message;
+      }
+    }
+
+    form.onsubmit = async e => {
       e.preventDefault();
-      posts.unshift(Object.fromEntries(new FormData(publish)));
-      localStorage.setItem(key, JSON.stringify(posts));
-      publish.reset();
-      render();
+      const post = Object.fromEntries(new FormData(form));
+      for (const key of Object.keys(post)) post[key] = post[key].trim();
+      if (!post.title || !post.place || !post.description) return alert("请填写完整信息");
+      const button = form.querySelector("button");
+      button.disabled = true;
+      try {
+        await api("/api/posts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(post)
+        });
+        form.reset();
+        await render();
+        alert("发布成功");
+      } catch (error) {
+        alert("发布失败：" + error.message);
+      } finally {
+        button.disabled = false;
+      }
     };
 
-    search.oninput = render;
+    list.onclick = async e => {
+      const button = e.target.closest("button[data-id]");
+      if (!button) return;
+      const proof = prompt("请填写未公开的物品特征或线索：");
+      if (!proof?.trim()) return;
+      button.disabled = true;
+      try {
+        await api("/api/posts/" + button.dataset.id + "/applications", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ proof: proof.trim() })
+        });
+        alert("提交成功");
+      } catch (error) {
+        alert("提交失败：" + error.message);
+      } finally {
+        button.disabled = false;
+      }
+    };
+
+    let searchTimer;
+    search.oninput = () => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(render, 250);
+    };
     filter.onchange = render;
     render();
   </script>
